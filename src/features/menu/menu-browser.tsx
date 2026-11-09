@@ -9,7 +9,7 @@ import { formatUsd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { MenuCategory } from "@/types/menu";
 
-export function MenuBrowser({ categories, ordersOpen }: { categories: MenuCategory[]; ordersOpen: boolean }) {
+export function MenuBrowser({ categories, ordersOpen, cartEnabled }: { categories: MenuCategory[]; ordersOpen: boolean; cartEnabled: boolean }) {
   const [active, setActive] = useState<string>("all");
   const visible = active === "all" ? categories : categories.filter((c) => c.slug === active);
   const tabs = [{ slug: "all", name: "All" }, ...categories.map((c) => ({ slug: c.slug, name: c.name }))];
@@ -37,7 +37,7 @@ export function MenuBrowser({ categories, ordersOpen }: { categories: MenuCatego
         ))}
       </div>
 
-      {!ordersOpen && (
+      {cartEnabled && !ordersOpen && (
         <p role="status" className="mb-8 rounded-md border border-border bg-secondary px-4 py-3 text-sm">
           Online ordering is currently closed. You can still browse the menu.
         </p>
@@ -75,15 +75,17 @@ export function MenuBrowser({ categories, ordersOpen }: { categories: MenuCatego
                       {item.dietaryLabels.length > 0 && (
                         <p className="mt-2 text-xs uppercase tracking-wider text-gold-text">{item.dietaryLabels.join(" · ")}</p>
                       )}
+                      {(cartEnabled || !item.isAvailable) && (
                       <div className="mt-4 flex items-center gap-3">
-                        <AddToCart
+                        {cartEnabled && <AddToCart
                           itemId={item.id}
                           name={item.name}
                           disabled={!item.isAvailable || !ordersOpen}
                           disabledLabel={!item.isAvailable ? "Unavailable" : "Orders closed"}
-                        />
+                        />}
                         {!item.isAvailable && <span className="text-sm font-medium text-destructive">Currently unavailable</span>}
                       </div>
+                      )}
                     </StaggerItem>
                   ))}
                 </Stagger>

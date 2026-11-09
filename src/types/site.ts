@@ -14,6 +14,7 @@ export interface SiteInfo {
   openingHours: OpeningHours[];
   socialLinks: SocialLink[];
   ordersOpen: boolean;
+  cartEnabled: boolean;
   fulfillment: { pickup: boolean; dineIn: boolean; delivery: boolean };
 }
 export interface Announcement {

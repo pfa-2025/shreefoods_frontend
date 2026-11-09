@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Featured } from "@/features/home/featured";
+import { getSite } from "@/lib/data";
 import { Hero } from "@/features/home/hero";
 import { AffiliationsTeaser, ReviewsTeaser } from "@/features/home/link-sections";
 import { StoryPreview } from "@/features/home/story-preview";
@@ -17,7 +18,8 @@ export async function generateMetadata(): Promise<Metadata> {
 const skeleton = <div className="mx-auto h-72 max-w-6xl skeleton rounded-md" aria-hidden />;
 
 async function HomeHero() {
-  return <Hero content={(await getPage("home")).content} />;
+  const [page, site] = await Promise.all([getPage("home"), getSite()]);
+  return <Hero content={page.content} cartEnabled={site?.cartEnabled ?? true} />;
 }
 
 export default function Home() {

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const delay = (s: number) => ({ "--d": `${s}s` }) as CSSProperties;
 
 /** Entrance is CSS-only (staggered "rise"), so it plays immediately, before any JavaScript has loaded. */
-export function Hero({ content }: { content: PageContent["home"] }) {
+export function Hero({ content, cartEnabled = true }: { content: PageContent["home"]; cartEnabled?: boolean }) {
   return (
     <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-12 md:py-20 lg:grid-cols-[1fr_1.15fr]">
       <div className="order-2 lg:order-1">
@@ -22,7 +22,7 @@ export function Hero({ content }: { content: PageContent["home"] }) {
         </p>
         <div className="rise mt-8 flex flex-wrap gap-3" style={delay(0.18)}>
           <Link href="/menu" className={cn(buttonVariants(), "h-12 px-7 text-base")}>
-            Order Now
+            {cartEnabled ? "Order Now" : "View Menu"}
           </Link>
           <Link href="/our-story" className={cn(buttonVariants({ variant: "outline" }), "h-12 px-7 text-base")}>
             Our Story

@@ -13,7 +13,7 @@ import { ActionMessage, Card, Field, Notice, Toggle, useAction } from "./ui";
 interface Settings {
   restaurantName: string; phone: string | null; email: string | null; address: string | null;
   openingHours: { day: string; hours: string }[]; socialLinks: { label: string; url: string }[];
-  taxRateBps: number; pickupEnabled: boolean; dineInEnabled: boolean; deliveryEnabled: boolean; ordersOpen: boolean;
+  taxRateBps: number; pickupEnabled: boolean; dineInEnabled: boolean; deliveryEnabled: boolean; ordersOpen: boolean; cartEnabled: boolean;
   paymentQrId: string | null; paymentQrUrl: string | null; paymentQrAlt: string; paymentHandle: string | null; paymentInstructions: string;
 }
 
@@ -30,7 +30,7 @@ function SettingsForm({ initial, onSaved }: { initial: Settings; onSaved: () => 
   const [s, setS] = useState({
     restaurantName: initial.restaurantName, phone: initial.phone ?? "", email: initial.email ?? "", address: initial.address ?? "",
     openingHours: initial.openingHours, socialLinks: initial.socialLinks, tax: formatBps(initial.taxRateBps),
-    pickupEnabled: initial.pickupEnabled, dineInEnabled: initial.dineInEnabled, ordersOpen: initial.ordersOpen,
+    pickupEnabled: initial.pickupEnabled, dineInEnabled: initial.dineInEnabled, ordersOpen: initial.ordersOpen, cartEnabled: initial.cartEnabled,
     paymentHandle: initial.paymentHandle ?? "", paymentInstructions: initial.paymentInstructions,
   });
   const [qr, setQr] = useState<{ id: string; url: string; altText: string } | null>(initial.paymentQrId && initial.paymentQrUrl ? { id: initial.paymentQrId, url: initial.paymentQrUrl, altText: initial.paymentQrAlt } : null);
@@ -49,7 +49,7 @@ function SettingsForm({ initial, onSaved }: { initial: Settings; onSaved: () => 
       json: {
         restaurantName: s.restaurantName, phone: s.phone, email: s.email, address: s.address,
         openingHours: s.openingHours, socialLinks: s.socialLinks, taxRateBps: bps,
-        pickupEnabled: s.pickupEnabled, dineInEnabled: s.dineInEnabled, ordersOpen: s.ordersOpen,
+        pickupEnabled: s.pickupEnabled, dineInEnabled: s.dineInEnabled, ordersOpen: s.ordersOpen, cartEnabled: s.cartEnabled,
         paymentQrId: qr?.id ?? null, paymentHandle: s.paymentHandle, paymentInstructions: s.paymentInstructions,
       },
     }), "Settings saved");
@@ -95,6 +95,7 @@ function SettingsForm({ initial, onSaved }: { initial: Settings; onSaved: () => 
 
       <Card title="Ordering">
         <div className="space-y-4">
+          <Toggle label="Show Add to cart and cart" checked={s.cartEnabled} onChange={(v) => patch({ cartEnabled: v })} hint="Turn off for a menu-only website: the Add buttons, cart icon and Order Now button are hidden and the server refuses orders. Turn it back on to take orders again." />
           <Toggle label="Accepting online orders" checked={s.ordersOpen} onChange={(v) => patch({ ordersOpen: v })} hint="Turn off to stop new orders (for example when the kitchen is closed). Customers can still browse the menu." />
           <Toggle label="Pickup" checked={s.pickupEnabled} onChange={(v) => patch({ pickupEnabled: v })} />
           <Toggle label="Dine-in" checked={s.dineInEnabled} onChange={(v) => patch({ dineInEnabled: v })} />

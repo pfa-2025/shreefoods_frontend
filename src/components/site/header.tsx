@@ -2,6 +2,7 @@
 
 import { AnimatePresence, m } from "motion/react";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -28,7 +29,7 @@ const subscribeScroll = (cb: () => void) => {
 };
 const isScrolled = () => window.scrollY > 8;
 
-export function Header() {
+export function Header({ cartEnabled = true }: { cartEnabled?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const scrolled = useSyncExternalStore(subscribeScroll, isScrolled, () => false);
@@ -49,11 +50,8 @@ export function Header() {
         Skip to content
       </a>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link
-          href="/"
-          className="font-display text-2xl font-medium tracking-wide text-primary transition-opacity hover:opacity-80"
-        >
-          Shree Foods
+        <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
+          <Image src="/images/brand/logo.png" alt="Shree Foods" width={1200} height={1132} priority className="h-12 w-auto" />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
@@ -71,14 +69,16 @@ export function Header() {
               {l.label}
             </Link>
           ))}
-          <CartLink />
-          <Link href="/menu" className={cta}>
-            Order Now
-          </Link>
+          {cartEnabled && <CartLink />}
+          {cartEnabled && (
+            <Link href="/menu" className={cta}>
+              Order Now
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-1 md:hidden">
-          <CartLink />
+          {cartEnabled && <CartLink />}
           <button
             type="button"
             className="-mr-2 p-2"
@@ -120,15 +120,13 @@ export function Header() {
                   </Link>
                 </m.li>
               ))}
-              <li className="pt-2">
-                <Link
-                  href="/menu"
-                  onClick={() => setOpen(false)}
-                  className={cn(cta, "w-full")}
-                >
-                  Order Now
-                </Link>
-              </li>
+              {cartEnabled && (
+                <li className="pt-2">
+                  <Link href="/menu" onClick={() => setOpen(false)} className={cn(cta, "w-full")}>
+                    Order Now
+                  </Link>
+                </li>
+              )}
             </ul>
           </m.nav>
         )}

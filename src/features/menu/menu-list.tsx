@@ -10,5 +10,5 @@ export async function MenuList() {
     return <EmptyState title="Menu coming soon">We’re updating our menu. Please check back shortly.</EmptyState>;
   }
   // If site settings fail to load, browsing still works; the server re-checks everything at checkout.
-  return <MenuBrowser categories={categories} ordersOpen={site?.ordersOpen ?? true} />;
+  return <MenuBrowser categories={categories} ordersOpen={site?.ordersOpen ?? true} cartEnabled={site?.cartEnabled ?? true} />;
 }

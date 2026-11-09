@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/motion/reveal";
 import { cacheLife } from "next/cache";
@@ -18,7 +19,7 @@ export async function Footer() {
     <footer className="mt-24 border-t border-border bg-secondary/60">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-3">
         <Reveal>
-          <p className="font-display text-2xl text-primary">{site?.restaurantName ?? "Shree Foods"}</p>
+          <Image src="/images/brand/logo.png" alt={site?.restaurantName ?? "Shree Foods"} width={1200} height={1132} className="h-24 w-auto" />
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             Maharashtrian and Gujarati home cooking, made fresh daily.
           </p>

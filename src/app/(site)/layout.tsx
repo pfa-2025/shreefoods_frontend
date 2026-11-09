@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { MotionProvider } from "@/components/motion/providers";
 import { Footer } from "@/components/site/footer";
-import { Header } from "@/components/site/header";
+import { SiteHeader } from "@/components/site/site-header";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +13,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </header>
         }
       >
-        <Header />
+        <SiteHeader />
       </Suspense>
       {/* overflow-x: clip stops slide-in animations from briefly making the page wider than the screen (unlike "hidden", it keeps sticky headers working) */}
       <main id="main" className="flex-1 overflow-x-clip">

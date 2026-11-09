@@ -258,6 +258,34 @@ test.describe("owner CMS", () => {
     await expect(page.getByText("Enter a full web address starting with https://")).toBeVisible();
   });
 
+  test("menu-only switch hides Add to cart and the cart, and brings them back", async ({ page }) => {
+    const setCart = async (on: boolean) => {
+      await page.goto("/admin/settings");
+      await page.getByLabel("Show Add to cart and cart").setChecked(on);
+      await page.getByRole("button", { name: "Save settings" }).click();
+      await expect(page.getByText("Settings saved")).toBeVisible();
+    };
+    try {
+      await setCart(false);
+      await expect(async () => {
+        await page.goto("/menu");
+        await expect(page.getByRole("heading", { name: "Vada Pav" })).toBeVisible();
+        await expect(page.getByRole("button", { name: /^Add .* to cart$/ })).toHaveCount(0);
+        await expect(page.getByRole("link", { name: /^Cart/ })).toHaveCount(0);
+        await expect(page.getByRole("link", { name: "Order Now" })).toHaveCount(0);
+      }).toPass({ timeout: 15_000 });
+      await page.goto("/cart");
+      await expect(page.getByText("Online ordering isn’t available right now.")).toBeVisible();
+    } finally {
+      await setCart(true);
+    }
+    await expect(async () => {
+      await page.goto("/menu");
+      await expect(page.getByRole("button", { name: /^Add .* to cart$/ }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: /^Cart/ }).first()).toBeVisible();
+    }).toPass({ timeout: 15_000 });
+  });
+
   test("settings: phone appears in the footer, tax drives checkout totals, and bad tax is refused; then reverted", async ({ page, browser, request }) => {
     const visitor = await (await browser.newContext()).newPage();
     await page.goto("/admin/settings");
