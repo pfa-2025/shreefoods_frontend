@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { Parallax } from "@/components/motion/parallax";
 import { buttonVariants } from "@/components/ui/button-variants";
 import type { PageContent } from "@/lib/content";
+import { siteImage } from "@/lib/site-images";
 import { cn } from "@/lib/utils";
 
 const delay = (s: number) => ({ "--d": `${s}s` }) as CSSProperties;
@@ -33,7 +34,7 @@ export function Hero({ content, cartEnabled = true }: { content: PageContent["ho
         <Parallax className="absolute inset-0" distance={28}>
           <div className="settle relative size-full">
             <Image
-              src="/images/hero.jpg"
+              src={siteImage.hero}
               alt="A plate of misal pav with farsan, onion and lime"
               fill
               priority
