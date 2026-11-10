@@ -38,18 +38,22 @@ async function noise(page: Page, w: number, h: number): Promise<Buffer> {
   return Buffer.from(url.split(",")[1], "base64");
 }
 
-/** Load an uploaded picture and report its size and the colour at some points (given as fractions of width/height). */
+/**
+ * Load an uploaded picture and report its size and the colour at some points (given as fractions of width/height).
+ * The bytes are fetched outside the page: images now live on another domain (Cloudflare R2), and a canvas that has
+ * drawn a cross-origin image can't be read back.
+ */
 async function inspect(page: Page, src: string, points: [number, number][]) {
-  return page.evaluate(async ({ src, points }) => {
-    const img = new Image();
-    img.src = src;
-    await img.decode();
+  const body = (await (await page.request.get(new URL(src, page.url()).toString())).body()).toString("base64");
+  return page.evaluate(async ({ body, points }) => {
+    const bin = Uint8Array.from(atob(body), (ch) => ch.charCodeAt(0));
+    const img = await createImageBitmap(new Blob([bin]));
     const c = document.createElement("canvas");
-    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.width = img.width; c.height = img.height;
     const ctx = c.getContext("2d")!;
     ctx.drawImage(img, 0, 0);
-    return { width: img.naturalWidth, height: img.naturalHeight, colors: points.map(([fx, fy]) => Array.from(ctx.getImageData(Math.floor(fx * img.naturalWidth), Math.floor(fy * img.naturalHeight), 1, 1).data).slice(0, 3)) };
-  }, { src, points });
+    return { width: img.width, height: img.height, colors: points.map(([fx, fy]) => Array.from(ctx.getImageData(Math.floor(fx * img.width), Math.floor(fy * img.height), 1, 1).data).slice(0, 3)) };
+  }, { body, points });
 }
 // the middle of each quadrant of the output picture
 const QUARTERS: [number, number][] = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
@@ -65,6 +69,8 @@ async function openLibrary(page: Page) {
 }
 /** Upload the currently cropped picture and return the stored picture's address. */
 async function upload(page: Page, alt: string) {
+  // the native dialog is still closing for a moment; anything typed before the preview shows is ignored
+  await expect(page.getByTestId("crop-preview")).toBeVisible();
   await page.getByLabel("Description (alt text)").first().fill(alt);
   await page.getByRole("button", { name: "Upload image" }).click();
   await expect(page.getByText("Uploaded")).toBeVisible();
@@ -99,11 +105,12 @@ test.describe("image cropper", () => {
     await setZoom(d, 2);
     await expect(result(page)).toContainText("300×300"); // half the width, and small crops are never enlarged
     await d.getByRole("button", { name: "Use this crop" }).click();
-    const out = await inspect(page, await upload(page, alt("zoom")), QUARTERS);
+    const stored = await upload(page, alt("zoom"));
+    const out = await inspect(page, stored, QUARTERS);
     expect([out.width, out.height]).toEqual([300, 300]);
     expect(names(out.colors)).toEqual(["red", "green", "blue", "yellow"]);
     // at the very corners of a centred 2x crop we are still inside each quadrant's own colour
-    const corners = await inspect(page, await page.getByRole("listitem").filter({ has: page.locator('input[value^="E2E crop zoom"]') }).getByRole("img").getAttribute("src") as string, [[0.05, 0.05], [0.95, 0.05], [0.05, 0.95], [0.95, 0.95]]);
+    const corners = await inspect(page, stored, [[0.05, 0.05], [0.95, 0.05], [0.05, 0.95], [0.95, 0.95]]);
     expect(names(corners.colors)).toEqual(["red", "green", "blue", "yellow"]);
   });
 
@@ -220,6 +227,7 @@ test.describe("image cropper", () => {
     await expect(result(page)).toContainText("PNG"); // sharp edges, so QR codes still scan
     await dialog(page).getByRole("button", { name: "Use this crop" }).click();
     const qrAlt = alt("qr");
+    await expect(page.getByTestId("crop-preview")).toBeVisible(); // the dialog is still closing until the preview shows
     await page.getByLabel("Description (alt text)").last().fill(qrAlt);
     await page.getByRole("button", { name: "Upload image" }).click();
     await expect(page.getByRole("img", { name: qrAlt }).first()).toBeVisible();
@@ -259,10 +267,10 @@ test.describe("image cropper", () => {
     const violations = (await new AxeBuilder({ page }).include("dialog").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()).violations.map((v) => ({ rule: v.id, nodes: v.nodes.slice(0, 2).map((n) => n.target.join(" ")) }));
     expect(violations).toEqual([]);
 
-    // Tab never leaves the window
+    // Tab never reaches the page behind the window (the browser may hand focus to its own address bar, i.e. <body>)
     for (let i = 0; i < 18; i++) {
       await page.keyboard.press("Tab");
-      expect(await page.evaluate(() => !!document.activeElement?.closest("dialog"))).toBe(true);
+      expect(await page.evaluate(() => { const a = document.activeElement; return a === document.body || !!a?.closest("dialog"); })).toBe(true);
     }
     // the zoom slider works from the keyboard
     const zoom = d.getByRole("slider", { name: "Zoom" });
@@ -272,10 +280,10 @@ test.describe("image cropper", () => {
     await page.keyboard.press("ArrowRight");
     expect(Number(await zoom.inputValue())).toBeGreaterThan(start);
     // aspect buttons say which one is chosen
-    await expect(d.getByRole("button", { name: "Original" })).toHaveAttribute("aria-pressed", "true");
+    await expect(d.getByRole("button", { name: "Original", exact: true })).toHaveAttribute("aria-pressed", "true");
     await d.getByRole("button", { name: "Wide 16:9" }).click();
     await expect(d.getByRole("button", { name: "Wide 16:9" })).toHaveAttribute("aria-pressed", "true");
-    await expect(d.getByRole("button", { name: "Original" })).toHaveAttribute("aria-pressed", "false");
+    await expect(d.getByRole("button", { name: "Original", exact: true })).toHaveAttribute("aria-pressed", "false");
     await page.keyboard.press("Escape");
     await expect(d).toHaveCount(0);
   });

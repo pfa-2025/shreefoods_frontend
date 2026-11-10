@@ -17,13 +17,39 @@ interface Props {
   onCancel: () => void;
 }
 
+/** The longest side of the turned working copy; the saved picture is never larger than the purpose's own limit anyway. */
+const TURN_EDGE = 4000;
+
+/**
+ * Turns the picture ourselves instead of asking the cropping library to: its quarter-turn fitting leaves the crop frame
+ * covering only part of a turned picture, so people could never select all of it. A turned copy makes the maths trivial.
+ */
+async function turned(src: string, quarters: number, type: "image/jpeg" | "image/png"): Promise<string> {
+  const img = await loadImage(src);
+  const swap = quarters % 2 === 1;
+  const scale = Math.min(1, TURN_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+  const c = document.createElement("canvas");
+  c.width = swap ? h : w;
+  c.height = swap ? w : h;
+  const ctx = c.getContext("2d");
+  if (!ctx) throw new Error("This browser can’t turn pictures.");
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate((quarters * Math.PI) / 2);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  const blob = await new Promise<Blob | null>((resolve) => c.toBlob(resolve, type, 0.95));
+  if (!blob) throw new Error("Couldn’t turn the picture.");
+  return URL.createObjectURL(blob);
+}
+
 function CropDialog({ file, src, purpose, onDone, onCancel }: Props) {
   const cfg = PURPOSES[purpose];
   const ref = useRef<HTMLDialogElement>(null);
   const [aspectId, setAspectId] = useState<AspectId>(cfg.aspect);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
+  const [quarters, setQuarters] = useState(0); // clockwise quarter turns, 0-3
+  const [workSrc, setWorkSrc] = useState(src); // the picture being cropped: the original, or a turned copy of it
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [area, setArea] = useState<Area | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -37,19 +63,44 @@ function CropDialog({ file, src, purpose, onDone, onCancel }: Props) {
     return () => d?.close();
   }, []);
 
-  const aspect = aspectValue(aspectId, natural, rotation);
+  const aspect = aspectValue(aspectId, natural, 0);
   const out = area ? outputSize(area.width, area.height, cfg.maxEdge) : null;
   const reframe = () => {
     setPos({ x: 0, y: 0 });
     setZoom(1);
   };
 
+  // Build the turned copy whenever the number of turns changes, and release the previous copy.
+  useEffect(() => {
+    let cancelled = false;
+    let made: string | null = null;
+    (quarters === 0 ? Promise.resolve(src) : turned(src, quarters, cfg.type === "image/png" ? "image/png" : "image/jpeg"))
+      .then((url) => {
+        if (quarters !== 0) made = url;
+        if (cancelled) {
+          if (made) URL.revokeObjectURL(made);
+        } else setWorkSrc(url);
+      })
+      .catch(() => !cancelled && setError("Couldn’t turn the picture. Please try again."));
+    return () => {
+      cancelled = true;
+      // the copy may still be on screen for a moment while the next one is built, so release it a little later
+      if (made) setTimeout(() => URL.revokeObjectURL(made!), 2000);
+    };
+  }, [quarters, src, cfg.type]);
+
+  function turn(by: number) {
+    setArea(null); // the old selection belongs to the old orientation
+    setQuarters((q) => (q + by + 4) % 4);
+    reframe();
+  }
+
   async function confirm() {
     if (!area) return;
     setBusy(true);
     setError(null);
     try {
-      const { blob } = await renderCrop(await loadImage(src), area, rotation, { maxEdge: cfg.maxEdge, type: cfg.type, maxBytes: MAX_UPLOAD_BYTES });
+      const { blob } = await renderCrop(await loadImage(workSrc), area, 0, { maxEdge: cfg.maxEdge, type: cfg.type, maxBytes: MAX_UPLOAD_BYTES });
       const base = file.name.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 60) || "image";
       onDone(new File([blob], `${base}-cropped.${cfg.type === "image/png" ? "png" : "jpg"}`, { type: cfg.type }));
     } catch (e) {
@@ -81,10 +132,9 @@ function CropDialog({ file, src, purpose, onDone, onCancel }: Props) {
         ) : (
           <div className="relative h-[min(52vh,460px)] overflow-hidden rounded-md bg-neutral-900" data-testid="crop-area">
             <Cropper
-              image={src}
+              image={workSrc}
               crop={pos}
               zoom={zoom}
-              rotation={rotation}
               aspect={aspect}
               minZoom={1}
               maxZoom={4}
@@ -124,9 +174,9 @@ function CropDialog({ file, src, purpose, onDone, onCancel }: Props) {
                 <input type="range" min={1} max={4} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-full accent-[var(--primary)]" />
               </label>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => { setRotation((r) => (r + 270) % 360); reframe(); }} aria-label="Rotate left" className="h-9 px-3"><RotateCcw aria-hidden /></Button>
-                <Button type="button" variant="outline" onClick={() => { setRotation((r) => (r + 90) % 360); reframe(); }} aria-label="Rotate right" className="h-9 px-3"><RotateCw aria-hidden /></Button>
-                <Button type="button" variant="outline" onClick={() => { setRotation(0); setAspectId(cfg.aspect); reframe(); }} className="h-9 px-3">Reset</Button>
+                <Button type="button" variant="outline" onClick={() => turn(-1)} aria-label="Rotate left" className="h-9 px-3"><RotateCcw aria-hidden /></Button>
+                <Button type="button" variant="outline" onClick={() => turn(1)} aria-label="Rotate right" className="h-9 px-3"><RotateCw aria-hidden /></Button>
+                <Button type="button" variant="outline" onClick={() => { setQuarters(0); setAspectId(cfg.aspect); reframe(); }} className="h-9 px-3">Reset</Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">

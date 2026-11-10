@@ -11,6 +11,9 @@ const securityHeaders = [
   ...(process.env.NODE_ENV === "production" ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }] : []),
 ];
 
+// Uploaded images live in Cloudflare R2; R2_PUBLIC_URL (the bucket's public address) must match the API's setting.
+const r2 = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL) : null;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false, // don't advertise the framework
   async headers() {
@@ -22,8 +25,11 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Uploaded images: Cloudinary in production, the API's /api/v1/uploads in development.
-    remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com" }],
+    // Uploaded images: Cloudflare R2 (or Cloudinary) in production, the API's /api/v1/uploads in development.
+    remotePatterns: [
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      ...(r2 ? [{ protocol: r2.protocol.replace(":", "") as "http" | "https", hostname: r2.hostname }] : []),
+    ],
     localPatterns: [{ pathname: "/images/**" }, { pathname: "/api/v1/uploads/**" }],
   },
   // Compression buffers proxied Server-Sent Events; the host/CDN compresses in production.

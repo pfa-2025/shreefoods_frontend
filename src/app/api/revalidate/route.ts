@@ -5,11 +5,14 @@ import { after } from "next/server";
 /**
  * Called by the API after a CMS save so public pages show edits immediately.
  *
- * Invalidation happens twice: now, and again about 1.5s later in the background. Without the second pass, two
- * edits made within a second or two of each other (e.g. flipping a dish to "sold out" right after changing its
- * price) could leave the public page showing the first edit's data until the cache expired on its own: the
- * cache treats an invalidation that lands in the same moment as the previous refresh as already handled.
+ * Invalidation happens several times: now, and again 1.5s, 4s and 8s later in the background. The cache ignores an
+ * invalidation that lands within a few seconds of the page's previous refresh, so two edits made close together
+ * (e.g. flipping a dish to "sold out" right after changing its price) could otherwise leave the public page
+ * showing the first edit's data until the cache expired on its own. Measured here: an invalidation about 2s after a
+ * refresh is dropped, one about 4s after it is honoured, so the later passes catch whatever the early ones missed.
  */
+const FOLLOW_UPS_MS = [1500, 4000, 8000];
+
 export async function POST(request: Request) {
   const expected = process.env.REVALIDATE_SECRET;
   if (!expected || expected.length < 16) return Response.json({ error: "Not configured" }, { status: 503 });
@@ -21,8 +24,12 @@ export async function POST(request: Request) {
 
   revalidateTag("content", { expire: 0 }); // next request waits for fresh data instead of serving stale
   after(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    revalidateTag("content", { expire: 0 });
+    let waited = 0;
+    for (const at of FOLLOW_UPS_MS) {
+      await new Promise((resolve) => setTimeout(resolve, at - waited));
+      waited = at;
+      revalidateTag("content", { expire: 0 });
+    }
   });
   return Response.json({ ok: true });
 }

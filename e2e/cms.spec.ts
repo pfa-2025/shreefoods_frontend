@@ -139,7 +139,7 @@ test.describe("owner CMS", () => {
 
     const img = card.getByRole("img");
     await expect(img).toBeVisible();
-    expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0); // the stored file really loads
+    await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0); // the stored file really loads (it may come from remote storage)
 
     await card.getByRole("button", { name: "Delete" }).click();
     await card.getByRole("button", { name: "Confirm delete" }).click();
