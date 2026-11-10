@@ -273,9 +273,13 @@ test.describe("owner CMS", () => {
         await expect(page.getByRole("button", { name: /^Add .* to cart$/ })).toHaveCount(0);
         await expect(page.getByRole("link", { name: /^Cart/ })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Order Now" })).toHaveCount(0);
+        await expect(page.getByRole("link", { name: /^Track (Order|your order)$/ })).toHaveCount(0); // header and footer
       }).toPass({ timeout: 15_000 });
       await page.goto("/cart");
       await expect(page.getByText("Online ordering isn’t available right now.")).toBeVisible();
+      await page.goto("/track");
+      await expect(page.getByText("Online ordering isn’t available right now.")).toBeVisible();
+      await expect(page.getByText("No orders found on this device")).toHaveCount(0);
     } finally {
       await setCart(true);
     }
@@ -283,6 +287,7 @@ test.describe("owner CMS", () => {
       await page.goto("/menu");
       await expect(page.getByRole("button", { name: /^Add .* to cart$/ }).first()).toBeVisible();
       await expect(page.getByRole("link", { name: /^Cart/ }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: "Track Order" }).first()).toBeVisible();
     }).toPass({ timeout: 15_000 });
   });
 

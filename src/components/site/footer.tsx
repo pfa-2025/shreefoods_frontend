@@ -34,7 +34,7 @@ export async function Footer() {
               ["/reviews", "Reviews"],
               ["/affiliations", "Affiliations"],
               ["/contact", "Contact"],
-              ["/track", "Track your order"],
+              ...(site?.cartEnabled === false ? [] : [["/track", "Track your order"]]),
             ].map(([href, label]) => (
               <li key={href}>
                 <Link href={href} className="hover:text-primary">

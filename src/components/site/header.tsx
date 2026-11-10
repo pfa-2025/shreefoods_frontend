@@ -11,7 +11,7 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { CartLink } from "@/features/cart/cart-link";
 import { cn } from "@/lib/utils";
 
-const links = [
+const allLinks = [
   { href: "/menu", label: "Menu" },
   { href: "/our-story", label: "Our Story" },
   { href: "/reviews", label: "Reviews" },
@@ -19,6 +19,9 @@ const links = [
   { href: "/contact", label: "Contact" },
   { href: "/track", label: "Track Order" },
 ];
+
+/** Order tracking only makes sense while the site takes orders. */
+const navLinks = (cartEnabled: boolean) => allLinks.filter((l) => cartEnabled || l.href !== "/track");
 
 const cta = cn(buttonVariants(), "h-10 px-5 text-sm");
 
@@ -31,6 +34,7 @@ const isScrolled = () => window.scrollY > 8;
 
 export function Header({ cartEnabled = true }: { cartEnabled?: boolean }) {
   const pathname = usePathname();
+  const links = navLinks(cartEnabled);
   const [open, setOpen] = useState(false);
   const scrolled = useSyncExternalStore(subscribeScroll, isScrolled, () => false);
 
