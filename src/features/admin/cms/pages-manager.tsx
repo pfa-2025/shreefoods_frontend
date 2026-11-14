@@ -84,6 +84,13 @@ function PageEditor({ page, label, path, onSaved }: { page: ApiPage; label: stri
           {key === "story" && (
             <>
               <Field label="Headline" value={text("headline")} onChange={(v) => set("headline", v)} maxLength={120} error={err("headline")} />
+              <MediaPicker
+                label="Story picture" purpose="dish"
+                value={content.imageUrl ? { id: "", url: String(content.imageUrl), altText: String(content.imageAlt ?? "") } : null}
+                onChange={(a) => setContent((c) => ({ ...c, imageUrl: a?.url ?? null, imageAlt: a?.altText ?? "" }))}
+              />
+              <p className="-mt-2 text-xs text-muted-foreground">Shown beside the story on the Our Story page and in the story section on the home page. Remove it to go back to the original picture.</p>
+              {err("imageUrl") && <p className="text-sm text-destructive">{err("imageUrl")}</p>}
               <List
                 label="Paragraphs" items={(content.paragraphs as string[]) ?? []} addLabel="Add paragraph" max={6}
                 onChange={(v) => set("paragraphs", v)}

@@ -258,6 +258,54 @@ test.describe("owner CMS", () => {
     await expect(page.getByText("Enter a full web address starting with https://")).toBeVisible();
   });
 
+  test("the Our Story picture can be changed in the admin, shows on the site, and can be reset", async ({ page, browser }) => {
+    const visitor = await (await browser.newContext()).newPage();
+    const alt = `E2E story picture ${Date.now()}`;
+    const save = async () => {
+      await page.getByRole("button", { name: "Save Our Story page" }).click();
+      await expect(page.getByText(/Saved\./)).toBeVisible();
+    };
+    const openStory = async () => {
+      await page.goto("/admin/pages");
+      await page.getByRole("tab", { name: "Our Story" }).click();
+    };
+    try {
+      await openStory();
+      await page.getByRole("button", { name: "Choose image" }).first().click();
+      await page.locator("details summary", { hasText: "Upload a new image" }).click();
+      await page.getByLabel("Image file").setInputFiles({ name: "story.png", mimeType: "image/png", buffer: PNG });
+      await page.getByRole("dialog", { name: "Crop image" }).getByRole("button", { name: "Use this crop" }).click();
+      await expect(page.getByTestId("crop-preview")).toBeVisible();
+      await page.getByLabel("Description (alt text)").last().fill(alt);
+      await page.getByRole("button", { name: "Upload image" }).click();
+      await expect(page.getByRole("img", { name: alt }).first()).toBeVisible();
+      await save();
+
+      for (const path of ["/our-story", "/"]) {
+        await publicShows(visitor, path, "Cooked the way it is at home");
+        await expect(async () => {
+          await visitor.goto(path);
+          await expect(visitor.getByRole("img", { name: alt })).toBeVisible();
+        }).toPass({ timeout: 15_000 });
+      }
+      const img = visitor.getByRole("img", { name: alt });
+      await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
+    } finally {
+      // back to the picture that ships with the website
+      await openStory();
+      const remove = page.getByRole("button", { name: "Remove" }).first();
+      if (await remove.isVisible()) {
+        await remove.click();
+        await save();
+      }
+    }
+    await expect(async () => {
+      await visitor.goto("/our-story");
+      await expect(visitor.getByRole("img", { name: alt })).toHaveCount(0);
+      await expect(visitor.getByRole("img", { name: "Pav bhaji served with buttered pav" })).toBeVisible();
+    }).toPass({ timeout: 15_000 });
+  });
+
   test("menu-only switch hides Add to cart and the cart, and brings them back", async ({ page }) => {
     const setCart = async (on: boolean) => {
       await page.goto("/admin/settings");
