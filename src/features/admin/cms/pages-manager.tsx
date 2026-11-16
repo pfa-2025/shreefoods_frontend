@@ -21,6 +21,7 @@ const PAGES: { key: PageKey; label: string; path: string }[] = [
   { key: "reviews", label: "Reviews", path: "/reviews" },
   { key: "affiliations", label: "Affiliations", path: "/affiliations" },
   { key: "contact", label: "Contact", path: "/contact" },
+  { key: "footer", label: "Footer", path: "every page" },
 ];
 
 export function PagesManager() {
@@ -80,6 +81,13 @@ function PageEditor({ page, label, path, onSaved }: { page: ApiPage; label: stri
           {(key === "menu" || key === "contact" || key === "reviews" || key === "affiliations") && (
             <Field label="Introduction under the page title" value={text("intro")} onChange={(v) => set("intro", v)} multiline rows={2} maxLength={300} error={err("intro")} />
           )}
+          {key === "footer" && (
+            <>
+              <Notice>The address, phone number and social links in the footer are edited under Settings. The footer’s menu links are fixed.</Notice>
+              <Field label="Short description under the logo" value={text("tagline")} onChange={(v) => set("tagline", v)} multiline rows={2} maxLength={200} error={err("tagline")} hint="Leave empty to show nothing." />
+              <Field label="Extra line at the very bottom (optional)" value={text("bottomNote")} onChange={(v) => set("bottomNote", v)} maxLength={200} error={err("bottomNote")} hint="Shown under “All rights reserved”, e.g. a licence or allergy note." />
+            </>
+          )}
           {key === "contact" && <Notice>Address, phone, email and opening hours are edited under Settings.</Notice>}
           {key === "story" && (
             <>
@@ -130,7 +138,7 @@ function PageEditor({ page, label, path, onSaved }: { page: ApiPage; label: stri
         </div>
       </Card>
 
-      <Card title="Search engines & sharing (SEO)">
+      {key !== "footer" && <Card title="Search engines & sharing (SEO)">
         <div className="space-y-4">
           <Notice>Leave a field empty to use the website’s default. Changes apply to <strong>{path}</strong>.</Notice>
           <Field label="Page title" value={seo.title ?? ""} onChange={(v) => setSeo({ ...seo, title: v || null })} maxLength={70} error={errors["seo.title"]} hint="Shown in the browser tab and Google results." />
@@ -140,7 +148,7 @@ function PageEditor({ page, label, path, onSaved }: { page: ApiPage; label: stri
           <Field label="Canonical address (advanced)" value={seo.canonicalUrl ?? ""} onChange={(v) => setSeo({ ...seo, canonicalUrl: v || null })} placeholder="https://www.yourrestaurant.com/menu" error={errors["seo.canonicalUrl"]} hint="Only set this if the same page is reachable at several addresses." />
           <Toggle label="Hide this page from search engines" checked={seo.noIndex} onChange={(v) => setSeo({ ...seo, noIndex: v })} hint="It stays on the website but won’t appear in Google, and is left out of the sitemap." />
         </div>
-      </Card>
+      </Card>}
 
       <ActionMessage message={message} />
       <Button type="submit" disabled={busy} className="h-11 px-6">{busy ? "Saving…" : `Save ${label} page`}</Button>

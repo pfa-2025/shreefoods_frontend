@@ -258,6 +258,38 @@ test.describe("owner CMS", () => {
     await expect(page.getByText("Enter a full web address starting with https://")).toBeVisible();
   });
 
+  test("the footer text can be edited in the admin and shows on every page, then is restored", async ({ page, browser }) => {
+    const visitor = await (await browser.newContext()).newPage();
+    const DEFAULT = "Maharashtrian and Gujarati home cooking, made fresh daily.";
+    const tag = `E2E footer line ${Date.now()}`;
+    const note = `E2E bottom note ${Date.now()}`;
+    const edit = async (tagline: string, bottom: string) => {
+      await page.goto("/admin/pages");
+      await page.getByRole("tab", { name: "Footer" }).click();
+      await page.getByLabel("Short description under the logo").fill(tagline);
+      await page.getByLabel("Extra line at the very bottom (optional)").fill(bottom);
+      await page.getByRole("button", { name: "Save Footer page" }).click();
+      await expect(page.getByText(/Saved\./)).toBeVisible();
+    };
+    try {
+      await edit(tag, note);
+      for (const path of ["/", "/menu"]) {
+        await expect(async () => {
+          await visitor.goto(path);
+          await expect(visitor.locator("footer")).toContainText(tag);
+          await expect(visitor.locator("footer")).toContainText(note);
+        }).toPass({ timeout: 15_000 });
+      }
+    } finally {
+      await edit(DEFAULT, "");
+    }
+    await expect(async () => {
+      await visitor.goto("/");
+      await expect(visitor.locator("footer")).toContainText(DEFAULT);
+      await expect(visitor.locator("footer")).not.toContainText(note);
+    }).toPass({ timeout: 15_000 });
+  });
+
   test("the Our Story picture can be changed in the admin, shows on the site, and can be reset", async ({ page, browser }) => {
     const visitor = await (await browser.newContext()).newPage();
     const alt = `E2E story picture ${Date.now()}`;

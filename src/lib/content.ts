@@ -9,6 +9,7 @@ export interface PageContent {
   story: { headline: string; paragraphs: string[]; imageUrl: string | null; imageAlt: string };
   reviews: { intro: string; links: { platform: string; url: string }[] };
   contact: { intro: string };
+  footer: { tagline: string; bottomNote: string };
   affiliations: { intro: string; items: { name: string; url: string | null }[] };
 }
 export type PageKey = keyof PageContent;
@@ -31,5 +32,6 @@ export const defaultContent: PageContent = {
   },
   reviews: { intro: "Every review here comes from a real order, and we read them all.", links: [] },
   contact: { intro: "Visit us, call ahead, or send an email." },
+  footer: { tagline: "Maharashtrian and Gujarati home cooking, made fresh daily.", bottomNote: "" },
   affiliations: { intro: "Organisations and partners we’re proud to work with.", items: [] },
 };

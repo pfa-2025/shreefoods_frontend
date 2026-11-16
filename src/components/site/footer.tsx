@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/motion/reveal";
 import { cacheLife } from "next/cache";
-import { getSite } from "@/lib/data";
+import { getPage, getSite } from "@/lib/data";
 import { safeHref } from "@/lib/safe-href";
 
 async function currentYear(): Promise<number> {
@@ -12,17 +12,14 @@ async function currentYear(): Promise<number> {
 }
 
 export async function Footer() {
-  const site = await getSite();
-  const year = await currentYear();
+  const [site, { content: footer }, year] = await Promise.all([getSite(), getPage("footer"), currentYear()]);
 
   return (
     <footer className="mt-24 border-t border-border bg-secondary/60">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-3">
         <Reveal>
           <Image src="/images/brand/logo.png" alt={site?.restaurantName ?? "Shree Foods"} width={1200} height={1132} className="h-24 w-auto" />
-          <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-            Maharashtrian and Gujarati home cooking, made fresh daily.
-          </p>
+          {footer.tagline && <p className="mt-3 max-w-xs text-sm text-muted-foreground">{footer.tagline}</p>}
         </Reveal>
         <Reveal delay={0.08} className="text-sm">
         <nav aria-label="Footer">
@@ -73,6 +70,7 @@ export async function Footer() {
       </div>
       <p className="border-t border-border py-5 text-center text-xs text-muted-foreground">
         © {year} {site?.restaurantName ?? "Shree Foods"}. All rights reserved.
+        {footer.bottomNote && <span className="mt-1 block">{footer.bottomNote}</span>}
       </p>
     </footer>
   );
